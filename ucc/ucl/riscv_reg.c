@@ -11,6 +11,7 @@
 Symbol riscvRegs[T6 + 1];
 Symbol riscvByteRegs[T6 + 1];
 Symbol riscvWordRegs[T6 + 1];
+int UsedRegs;
 
 Symbol CreateReg(char *name, char *iname, int no) {
 	Symbol reg;
@@ -20,7 +21,7 @@ Symbol CreateReg(char *name, char *iname, int no) {
 	reg->val.i[0] = no;
 	reg->reg = reg;
 
-	if (iname != nul) {
+	if (iname != NULL) {
 		CALLOC(reg->next);
 		reg->next->kind = SK_IRegister;
 		reg->next->name = reg->next->aname = iname;	
@@ -28,3 +29,26 @@ Symbol CreateReg(char *name, char *iname, int no) {
 	return reg;
 }
 
+
+void ClearRegs() {
+	int i;
+	for (i = ZERO; i <= T6; i++) {
+		if (riscvRegs[i]) {
+			SpillReg(riscvRegs[i]);
+		}
+	}
+}
+
+void SpillReg(Symbol reg) {
+	Symbol p;
+	p = reg->link;
+	while (p) {
+		p->reg = NULL;
+		if (p->needwb && p->ref > 0) {
+			p->needwb = 0;
+			StoreVar(reg, p);
+		}
+		p = p->link;
+	}
+	reg->link = NULL;
+}
