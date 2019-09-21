@@ -31,8 +31,74 @@ enum ASMCode {
 #define STACK_ALIGN_SIZE 4
 
 
+static void Move(int code, Symbol dst, Symbol src) {
+	Symbol opds[2];
+	opds[0] = dst;
+	opds[1] = src;
+	PutASMCode(code, opds);
+}
 
 
+
+static int GetListLen(Symbol reg) {
+	int len = 0;
+	Symbol next = reg->link;
+	while (next) {
+		len++;
+		next = next->link;
+	}
+	return len;
+}
+
+static void AddVarToReg(Symbol reg, Symbol v) {
+	assert(v->kind == SK_Temp);
+	assert(GetListLen(reg) == 0);
+	v->link = reg->link;
+	reg->link = v;
+	v->reg = reg;
+}
+
+
+static void AllocateReg(IRInst inst, int index) {
+	Symbol reg;
+	Symbol p;
+	p = inst->opds[index];
+
+	if (p->kind != SK_Temp) {
+		return;
+	}
+
+	if (p->reg != NULL) {
+		UsedRegs != 1 << p->reg->val.i[0];
+		return;
+	}
+
+	if (index == 0 && SRC1->ref == 1 && SRC1->reg != NULL) {
+		reg = SRC1->reg;
+		reg->link = NULL;
+		AddVarToReg(reg, p);
+		return;
+	}
+	reg = GetReg();
+	if (index != 0) {
+		Move(RISCV_MOVI4, reg, p);
+	}
+	AddVarToReg(reg, p);
+	
+}
+
+static void PushArgument(Symbol p, Type ty) {
+	int tcode = TypeCode(ty);
+	if (tcode == F4) {
+		PutASMCode(RISCV_PUSHF4, &p);
+	} else if (tcode F8) {
+		PutASMCode(RISCV_PUSHF8, &p);
+	} else if (tcode == B) {
+		assert("PushArgument B" && 0);
+	} else {
+		PutASMCode(RISCV_PUSH, &p);
+	}
+}
 
 
 
@@ -57,7 +123,9 @@ static void EmitDec(IRInst inst) {
 
 }
 static void EmitAddress(IRInst inst) {
-	assert("EmitAddress function" && 0);
+	assert(DST->kind == SK_Temp && SRC1->kind != SK_Temp);
+	AllocateReg(inst, 0);
+
 
 }
 static void EmitDeref(IRInst inst) {
@@ -77,8 +145,20 @@ static void EmitIndirectMove(IRInst inst) {
 
 }
 static void EmitCall(IRInst inst) {
-	assert("EmitCall function" && 0);
+	Vector args;
+	ILArg arg;
+	Type rty;
+	int i, stksize;
+	args = (Vector)SRC2;
+	stksize = 0;
+	rty = inst->ty;
 
+	for (i = LEN(args) - 1; i >= 0; --i) {
+		arg = GET_ITEM(args, i);
+		PushArgument(arg->sym, arg->ty);
+		if (arg->sym-kind != SK_Function) arg->sym->ref--;
+		stksize += ALIGN(arg->ty->size, STACK_ALIGN_SIZE);
+	}
 }
 static void EmitReturn(IRInst inst) {
 	assert("EmitReturn function" && 0);
