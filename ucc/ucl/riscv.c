@@ -152,10 +152,10 @@ static void EmitCall(IRInst inst) {
 	ILArg arg;
 	Type rty;
 	int stksize;
-	int argLen = LEN(args);
 	args = (Vector)SRC2;
 	stksize = 0;
 	rty = inst->ty;
+	int argLen = LEN(args);
 	
 	if (argLen > 1) {
 		assert("arglen too long" && 0);
