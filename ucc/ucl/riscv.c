@@ -2,7 +2,7 @@
 #include "ast.h"
 #include "expr.h"
 #include "gen.h"
-#include "reg.h"
+#include "riscv_reg.h"
 #include "target.h"
 #include "output.h"
 
@@ -90,13 +90,16 @@ static void AllocateReg(IRInst inst, int index) {
 static void PushArgument(Symbol p, Type ty) {
 	int tcode = TypeCode(ty);
 	if (tcode == F4) {
-		PutASMCode(RISCV_PUSHF4, &p);
-	} else if (tcode F8) {
-		PutASMCode(RISCV_PUSHF8, &p);
+		assert("PushArgument F4" && 0);
+		//PutASMCode(RISCV_PUSHF4, &p);
+	} else if (tcode == F8) {
+		//PutASMCode(RISCV_PUSHF8, &p);
+		assert("PushArgument F8" && 0);
 	} else if (tcode == B) {
 		assert("PushArgument B" && 0);
 	} else {
-		PutASMCode(RISCV_PUSH, &p);
+		//PutASMCode(RISCV_PUSH, &p);
+		PutASMCode(RISCV_MOVI4TOARG, &p);
 	}
 }
 
@@ -148,17 +151,49 @@ static void EmitCall(IRInst inst) {
 	Vector args;
 	ILArg arg;
 	Type rty;
-	int i, stksize;
+	int stksize;
+	int argLen = LEN(args);
 	args = (Vector)SRC2;
 	stksize = 0;
 	rty = inst->ty;
+	
+	if (argLen > 1) {
+		assert("arglen too long" && 0);
+	}
 
-	for (i = LEN(args) - 1; i >= 0; --i) {
+	SpillReg(riscvRegs[A0]);
+	for (int i = argLen - 1; i >= 0; --i) {
 		arg = GET_ITEM(args, i);
 		PushArgument(arg->sym, arg->ty);
-		if (arg->sym-kind != SK_Function) arg->sym->ref--;
+		if (arg->sym->kind != SK_Function) arg->sym->ref--;
 		stksize += ALIGN(arg->ty->size, STACK_ALIGN_SIZE);
 	}
+
+	if (IsRecordType(rty) && IsNormalRecord(rty)) {
+		assert("IsRecordType IsNormalRecord" && 0);
+		//Symbol opds[2];
+		//opds[0] = GetReg();
+		//opds[1] = DST;
+		//PutASMCode(RISCV_ADDR, opds);
+		//PutASMCode(RISCV_PUSH, opds);
+		//stksize += 4;
+		//DST = NULL;
+	}
+	PutASMCode(SRC1->kind == SK_Function ? RISCV_CALL : RISCV_ICALL, inst->opds);
+	if (stksize != 0) {
+		Symbol p;
+		p = IntConstant(stksize);
+		//PutASMCode(RISCV_REDUCEF, &p);
+	}
+	if (DST != NULL) {
+		DST->ref--;
+	}
+	if (SRC1->kind != SK_Function) SRC1->ref--;
+
+	if (DST == NULL) {
+		return;
+	}
+	assert("emit call error" && 0);
 }
 static void EmitReturn(IRInst inst) {
 	assert("EmitReturn function" && 0);

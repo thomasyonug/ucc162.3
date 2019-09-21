@@ -2,6 +2,7 @@
 
 .data
 
+.str0:	.string	"123"
 
 
 
@@ -14,7 +15,12 @@ main:
 sd s0,24(sp)
 addi s0,sp,32
 mv a5,a0
+	addi sp,sp,-32
+sd s0,24(sp)
+addi s0,sp,32
+mv a5,a0
 .BB0:
+	call printf
 	ld s0,24(sp)
 addi sp,sp,32
 jr ra
