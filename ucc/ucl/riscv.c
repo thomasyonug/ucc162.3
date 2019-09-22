@@ -31,15 +31,6 @@ enum ASMCode {
 #define STACK_ALIGN_SIZE 4
 
 
-static void Move(int code, Symbol dst, Symbol src) {
-	Symbol opds[2];
-	opds[0] = dst;
-	opds[1] = src;
-	PutASMCode(code, opds);
-}
-
-
-
 static int GetListLen(Symbol reg) {
 	int len = 0;
 	Symbol next = reg->link;
@@ -50,6 +41,9 @@ static int GetListLen(Symbol reg) {
 	return len;
 }
 
+
+
+
 static void AddVarToReg(Symbol reg, Symbol v) {
 	assert(v->kind == SK_Temp);
 	assert(GetListLen(reg) == 0);
@@ -57,6 +51,36 @@ static void AddVarToReg(Symbol reg, Symbol v) {
 	reg->link = v;
 	v->reg = reg;
 }
+
+
+
+
+
+static void ModifyVar(Symbol p) {
+	Symbol reg;
+	if (p->reg == NULL) {
+		return;
+	}
+	p->needwb = 0;
+	reg = p->reg;
+	assert(GetListLen(reg) == 1);
+	assert(p == reg->link);
+	SpillReg(reg);
+	AddVarToReg(reg, p);
+	p->needwb = 1;
+}
+
+
+static void Move(int code, Symbol dst, Symbol src) {
+	Symbol opds[2];
+	opds[0] = dst;
+	opds[1] = src;
+	PutASMCode(code, opds);
+}
+
+
+
+
 
 
 static void AllocateReg(IRInst inst, int index) {
@@ -125,12 +149,14 @@ static void EmitDec(IRInst inst) {
 	assert("EmitDec function" && 0);
 
 }
+
 static void EmitAddress(IRInst inst) {
 	assert(DST->kind == SK_Temp && SRC1->kind != SK_Temp);
 	AllocateReg(inst, 0);
-
-
+	PutASMCode(RISCV_ADDR, inst->opds);
+	//ModifyVar(DST);
 }
+
 static void EmitDeref(IRInst inst) {
 	assert("EmitDeref function" && 0);
 
@@ -161,13 +187,13 @@ static void EmitCall(IRInst inst) {
 		assert("arglen too long" && 0);
 	}
 
-	SpillReg(riscvRegs[A0]);
-	for (int i = argLen - 1; i >= 0; --i) {
-		arg = GET_ITEM(args, i);
-		PushArgument(arg->sym, arg->ty);
-		if (arg->sym->kind != SK_Function) arg->sym->ref--;
-		stksize += ALIGN(arg->ty->size, STACK_ALIGN_SIZE);
-	}
+//	SpillReg(riscvRegs[A0]);
+//	for (int i = argLen - 1; i >= 0; --i) {
+//		arg = GET_ITEM(args, i);
+//		PushArgument(arg->sym, arg->ty);
+//		if (arg->sym->kind != SK_Function) arg->sym->ref--;
+//		stksize += ALIGN(arg->ty->size, STACK_ALIGN_SIZE);
+//	}
 
 	if (IsRecordType(rty) && IsNormalRecord(rty)) {
 		assert("IsRecordType IsNormalRecord" && 0);
@@ -249,7 +275,6 @@ static void EmitBBlock(BBlock bb) {
 
 		inst = inst->next;
 		ClearRegs();
-
 	}
 }
 
@@ -327,7 +352,7 @@ void EmitFunction(FunctionSymbol fsym) {
 }
 
 void StoreVar(Symbol reg, Symbol v) {
-	assert("StoreVar" && 0);
+	Move(RISCV_MOVI4, v, reg);
 }
 
 

@@ -30,7 +30,8 @@ static char* GetAccessName(Symbol p) {
 			} else if (p->sclass == TK_STATIC) {
 				p->aname = FormatName("%s.%d", p->name, TempNum++);
 			} else {
-				assert("GetAccessName error 1" && 0);
+				//assert("GetAccessName error 1" && 0);
+				p->aname = FormatName("%d(fp)", AsVar(p)->offset);
 			}
 			break;
 		case SK_Function:
