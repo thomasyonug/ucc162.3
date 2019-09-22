@@ -19,7 +19,7 @@ static char* GetAccessName(Symbol p) {
 	}
 	switch (p->kind) {
 		case SK_Constant:
-			p->aname = FormatName("$%s", p->name);
+			p->aname = FormatName("%s", p->name);
 			break;
 		case SK_String: case SK_Label:
 			p->aname = FormatName(".%s", p->name);
@@ -31,7 +31,7 @@ static char* GetAccessName(Symbol p) {
 				p->aname = FormatName("%s.%d", p->name, TempNum++);
 			} else {
 				//assert("GetAccessName error 1" && 0);
-				p->aname = FormatName("%d(fp)", AsVar(p)->offset);
+				p->aname = FormatName("%d(s0)", AsVar(p)->offset);
 			}
 			break;
 		case SK_Function:
@@ -72,7 +72,7 @@ void SetupRegisters(void) {
 	riscvRegs[TP] = CreateReg("tp", "(tp)", TP);	
 	riscvRegs[T0] = CreateReg("t0", "(t0)", T0);	
 	riscvRegs[T1] = CreateReg("t1", "(t1)", T1);	
-	riscvRegs[FP] = CreateReg("fp", "(fp)", FP);	
+	riscvRegs[FP] = CreateReg("s0", "(s0)", FP);	
 	riscvRegs[S1] = CreateReg("s1", "(s1)", S1);	
 	riscvRegs[A0] = CreateReg("a0", "(a0)", A0);	
 	riscvRegs[A1] = CreateReg("a1", "(a1)", A1);	

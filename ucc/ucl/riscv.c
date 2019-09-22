@@ -26,7 +26,7 @@ enum ASMCode {
 #define IsNormalRecord(rty) (rty->size != 1 && rty->size != 2 && rty->size != 4 && rty->size != 8)
 
 
-#define PRESERVE_REGS 4
+#define PRESERVE_REGS 2
 #define SCRATCH_REGS 4
 #define STACK_ALIGN_SIZE 4
 
@@ -131,7 +131,48 @@ static void PushArgument(Symbol p, Type ty) {
 
 
 static void EmitAssign(IRInst inst) {
-	assert("EmitAssign function" && 0);
+	int code;
+	int tcode = TypeCode(inst->ty);
+	assert(DST->kind == SK_Temp);
+	assert(tcode == I4 || tcode == U4);
+
+	code = ASM_CODE(inst->opcode, tcode);
+	switch (code) {
+		case RISCV_DIVI4:
+		case RISCV_DIVU4:
+		case RISCV_MODI4:
+		case RISCV_MODU4:
+		case RISCV_MULU4:
+			assert("EmitAssign error" && 0);
+		break;
+
+		case RISCV_LSHI4:
+		case RISCV_LSHU4:
+		case RISCV_RSHI4:
+		case RISCV_RSHU4:
+			assert("EmitAssign error1" && 0);
+		break;
+
+		case RISCV_NEGI4:
+		case RISCV_NEGU4:
+			assert("EmitAssign error2" && 0);
+		break;
+
+		default:
+			AllocateReg(inst, 1);
+			AllocateReg(inst, 2);
+
+put_code:
+			AllocateReg(inst, 0);
+			assert(DST->reg != NULL);
+			if (DST->reg != SRC1->reg) {
+				Move(RISCV_MOVI4, DST, SRC1);
+			}
+			PutASMCode(code, inst->opds);
+			break;
+	}
+	ModifyVar(DST);
+	
 }
 static void EmitBranch(IRInst inst) {
 	assert("EmitBranch function" && 0);
@@ -165,10 +206,46 @@ static void EmitCast(IRInst inst) {
 	assert("EmitCast function" && 0);
 
 }
-static void EmitMove(IRInst inst) {
-	assert("EmitMove function" && 0);
 
+static void EmitMoveBlock(IRInst inst) {
+	assert("EmitMoveBlock eror" && 0);
 }
+
+static void EmitMove(IRInst inst) {
+	int tcode = TypeCode(inst->ty);
+	Symbol reg;
+	if (tcode == B) {
+		EmitMoveBlock(inst);
+		return;
+	}
+	switch (tcode) {
+		case I1: case U1:
+			assert("EmitMove switch1" && 0);
+		break;
+		case I2: case U2:
+			assert("EmitMove switch2" && 0);
+		break;
+		case I4: case U4:
+			if (SRC1->kind == SK_Constant) {
+				Move(RISCV_LI, DST, SRC1);
+			} else {
+				AllocateReg(inst, 1);
+				AllocateReg(inst, 0);
+				if (SRC1->reg == NULL && DST->reg == NULL) {
+					reg = GetReg();
+					Move(RISCV_MOVI4, reg, SRC1);
+					Move(RISCV_MOVI4, DST, reg);
+				} else {
+					Move(RISCV_MOVI4, DST, SRC1);
+				}
+			}
+			ModifyVar(DST);
+		break;
+		default:
+			assert(0);
+	}
+}
+
 static void EmitIndirectMove(IRInst inst) {
 	assert("EmitIndirectMove function" && 0);
 
@@ -222,7 +299,31 @@ static void EmitCall(IRInst inst) {
 	assert("emit call error" && 0);
 }
 static void EmitReturn(IRInst inst) {
-	assert("EmitReturn function" && 0);
+	Type ty = inst->ty;
+
+	if (IsRecordType(ty) && IsNormalRecord(ty)) {
+		//inst->opcode = IMOV;
+		//SRC1 = DST;
+		//DST = FSYM->params;
+		//EmitIndirectMove(inst);
+		//return;
+	}
+	switch (ty->size) {
+		case 1:
+		case 2:
+			assert("EmitReturn error" && 0);
+		break;
+		case 4:
+			if (DST->reg != riscvRegs[A0]) {
+				Move(RISCV_LD, riscvRegs[A0], DST);
+			}
+		break;
+		case 8:
+			assert("EmitReturn error2" && 0);
+		break;
+		default:
+			assert(0);
+	}
 
 }
 static void EmitClear(IRInst inst) {
@@ -257,7 +358,7 @@ static void EmitPrologue(int  stksize) {
 	PutASMCode(RISCV_PROLOGUE, NULL);
 	if (stksize != 0) {
 		Symbol sym = IntConstant(stksize);
-		PutASMCode(RISCV_PROLOGUE, &sym);
+		PutASMCode(RISCV_EXPANDF, &sym);
 	}
 }
 
